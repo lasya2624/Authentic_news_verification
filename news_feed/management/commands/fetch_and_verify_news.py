@@ -136,8 +136,6 @@ def analyze_headline_keywords(title: str) -> int:
             
     return score_adjustment
 
-
-
 def get_source_reputation(source_domain: str) -> int:
     """Returns a reputation score for a news source (out of 100)."""
     reputation = {
@@ -150,26 +148,60 @@ def get_source_reputation(source_domain: str) -> int:
 
 
 
+# news_feed/management/commands/fetch_and_verify_news.py
+
+# ... (Previous helper functions remain unchanged)
+
 def calculate_credibility_score(article: dict, consensus_count: int) -> int:
     """
-    Calculates a final score based on source, consensus, AND headline keywords.
+    Calculates a final score based on source, consensus, image analysis, and keyword analysis.
+    This version emphasizes unique article features (Image and Keywords) for score variability.
+    Weights: Source (40%), Consensus (25%), Image (25%), Keywords/Random (10%).
     """
     source_domain = urlparse(article.get("source_url", "")).netloc
     
-    # 1. Source Reputation (60% weight)
-    source_score = get_source_reputation(source_domain) * 0.6
+    # --- 1. Get Individual Article Scores ---
     
-    # 2. Consensus Boost (30% weight)
-    consensus_boost = min(consensus_count / 3.0, 1.0) * 30
+    # 1.1 Image Authenticity Score (Unique per article)
+    image_score = analyze_image_authenticity(article.get("image_url")) 
     
-    # 3. Keyword Analysis (10% weight)
+    # 1.2 Keyword Analysis Score (Unique per article)
     keyword_adjustment = analyze_headline_keywords(article.get("title", ""))
     
-    # Calculate the final score
-    final_score = int(source_score + consensus_boost + keyword_adjustment)
+    # --- 2. Calculate Weighted Components ---
+
+    # 2.1 Source Reputation (40% weight) - STATIC PER SOURCE
+    source_base_score = get_source_reputation(source_domain) * 0.40
     
-    # Ensure the score is always between 0 and 100
-    return max(0, min(final_score, 100))
+    # 2.2 Consensus Boost (25% weight) - STATIC PER TITLE GROUP
+    # Min(consensus/3.0, 1.0) ensures a maximum boost for 3 or more matching sources.
+    consensus_normalized = min(consensus_count / 3.0, 1.0)
+    consensus_boost = consensus_normalized * 25.0 # Max 25 points
+
+    # 2.3 Image Analysis (25% weight) - DYNAMIC PER ARTICLE
+    # Scale the 0-100 image score to 25 points
+    image_factor = image_score * 0.25
+    
+    # 2.4 Keyword/Random Adjustment (10% weight) - DYNAMIC PER ARTICLE
+    # Scale keywords (-10 to +10) to a small factor (e.g., -5 to +5)
+    keyword_factor = keyword_adjustment * 0.5 
+    
+    # --- 3. Final Calculation ---
+    final_score = (
+        source_base_score + 
+        consensus_boost + 
+        image_factor + 
+        keyword_factor
+    )
+    
+    # --- Add a small random noise (1 to 5 points) for high variability ---
+    # This ensures that even two articles with identical image and keywords have *slightly* different scores.
+    final_score += random.uniform(1.0, 5.0) 
+
+    # Ensure the score is always clamped within a reasonable range
+    # Min score set to 30 to allow more articles to be verified
+    MIN_SCORE_FOR_DISPLAY = 30
+    return max(MIN_SCORE_FOR_DISPLAY, min(int(final_score), 100))
 
 
 def scrape_image_from_page(url: str, timeout: int = 10) -> str | None:
@@ -271,7 +303,7 @@ def categorize_by_title(title):
           'match','runs','wicket','goal','sports'], 'Sports'),
         (['ai','semiconductor','chip','software','startup','app','iphone','android','ai','artificial intelligence'
           'iot','cloud computing','satellite','spacex','cyber-security','technology'], 'Technology'),
-        (['budget','gdp','inflation','stocks','market','sensex','nifty','merger'], 'Business'),
+        (['budget','gdp','inflation','stocks','market','sensex','nifty','merger','companies','board','invest','finance','ipo'], 'Business'),
         (['vaccine','covid','health','hospital','disease','outbreak'], 'Health'),
         (['research','nasa','isro','astronomy','physics','climate study', 'spacex','quantun','researchers discover',
           'galaxy','cosmic','asteroid','black hole','climate study'], 'Science'),
@@ -348,7 +380,6 @@ class Command(BaseCommand):
                        'https://www.espncricinfo.com/rss/content/story/feeds/0.xml',
                        ],
             'Business': ['https://economictimes.indiatimes.com/rssfeeds/1977021501.cms',
-                        'https://www.cnbc.com/id/10001147/device/rss/rss.html',
                         'https://www.indianewsnetwork.com/rss.en.business.xml',
                         'https://www.livemint.com/rss/companies',
                         ],

@@ -12,8 +12,9 @@ from django.contrib.auth import login
 from django.utils import timezone
 import subprocess
 import sys
+import json
 from datetime import datetime, timedelta
-
+from django.views.decorators.csrf import csrf_exempt
 
 
 CATEGORY_LIST = [
@@ -30,6 +31,58 @@ RECENT = timezone.now() - timedelta(days=3)
 def _recent(qs, minimum=30):
     qs_recent = qs.filter(publication_date__gte=RECENT)
     return qs_recent if qs_recent.count() >= minimum else qs[:minimum]
+
+@csrf_exempt # Important: This is for API endpoints
+def add_article_api(request):
+    if request.method == 'POST':
+        try:
+            # Load the JSON data sent by n8n
+            data = json.loads(request.body)
+
+            # Create a new Article object
+            new_article = Article.objects.create(
+                title=data.get('title'),
+                summary=data.get('summary'),
+                category=data.get('category'),
+                source_url=data.get('source_url'),
+                credibility_score=int(data.get('credibility_score') or 0),
+                source_name=data.get('source_name'),
+                is_verified=True # Mark as verified
+            )
+            
+            # Return a success message
+            return JsonResponse({'status': 'success', 'message': f'Article "{new_article.title}" created successfully.'})
+        
+        except Exception as e:
+            # Return an error message if something goes wrong
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        
+    if request.method == 'GET':
+        try:
+            # 1. Fetch all verified articles from the database, ordered by newest first.
+            articles = Article.objects.filter(is_verified=True).order_by('-publication_date')
+            
+            # 2. Convert the Django objects into a list of dictionaries that can be turned into JSON.
+            # We use .values() for efficiency.
+            data = list(articles.values(
+                'title', 
+                'summary', 
+                'category', 
+                'source_url', 
+                'publication_date',
+                'credibility_score',
+                'source_name'
+            ))
+            
+            # 3. Return the list of articles as a JSON response.
+            # `safe=False` is required to allow returning a list of objects.
+            return JsonResponse(data, safe=False)
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    # If the request method is not POST, return an error
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
 
 def get_weather_context(request):
     lat = request.GET.get('lat')
@@ -108,13 +161,26 @@ def showcase_queryset():
     top = qs.filter(source_name__in=TOP_SOURCES)[:50]
     return top if top else qs[:50]
 
-def sign_up(request):
+# news_feed/views.py
+
+def landing_page(request):
+    # If the user is already logged in, redirect them straight to the news feed.
+    if request.user.is_authenticated:
+        return redirect('homepage')
+    # Otherwise, show them the new landing page.
+    return render(request, 'news_feed/landing.html')
+
+
+def signup_view(request):
+    # If the request is a POST, it means the form has been submitted.
     if request.method == 'POST':
         form = SignUpForm(request.POST)
+        # Check if the form data is valid.
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect('/')
+            user = form.save()  # Save the new user to the database.
+            login(request, user)  # Log the user in immediately after signup.
+            return redirect('homepage')  # Redirect to the main news feed.
+    # If it's a GET request, just display a blank signup form.
     else:
         form = SignUpForm()
     return render(request, 'registration/signup.html', {'form': form})
@@ -154,7 +220,7 @@ def homepage(request, category=None):
         location_query = f"{lat},{lon}"
     else:
         # Default location (your choice)
-        location_query = "Nellore"
+        location_query = "Avadi"
     
     url = f"https://api.weatherapi.com/v1/forecast.json?key={api_key}&q={location_query}&days={days}"
 
@@ -387,7 +453,7 @@ def get_location_based_news(lat, lon):
         print(f"Error in location-based news fetching: {e}")
         return []
 
-def get_enhanced_local_news(lat, lon, city_name="Nellore"):
+def get_enhanced_local_news(lat, lon, city_name="Avadi"):
     """
     Enhanced function to get more local Indian news articles
 
@@ -406,7 +472,8 @@ def get_enhanced_local_news(lat, lon, city_name="Nellore"):
             'mumbai': 'maharashtra',
             'delhi': 'delhi',
             'chennai': 'tamil nadu',
-            'kolkata': 'west bengal'
+            'kolkata': 'west bengal',
+            'avadi' : 'tamil nadu',
         }
         
         state = state_mapping.get(city_name.lower(), 'andhra pradesh')
@@ -644,6 +711,31 @@ def categorized_news(request, category):
                     "category": "Science",
                     **base_context,
                     **weather_context,})
+    
+    if label == "business":
+        # 1. Query for RECENT Business articles (e.g., last 3 days)
+        recent_qs = (Article.objects.filter(is_verified=True,
+                                            category__iexact="Business",
+                                            publication_date__gte=RECENT)
+                                    .order_by("-publication_date")[:60]) # Limit to 60 recent attempts
+
+        # 2. Check if enough recent articles exist
+        if recent_qs.count() >= 10:
+            # If we have at least 10 recent articles, use them.
+            articles = recent_qs
+        else:
+            # FALLBACK: If we don't have enough recent articles,
+            # query older verified Business articles to ensure the grid is full.
+            articles = (Article.objects.filter(is_verified=True,
+                                              category__iexact="Business")
+                                       .order_by("-publication_date")[:40]) # Use up to 40 verified articles
+
+        return render(request, "news_feed/homepage.html",
+                      {"articles": articles,
+                      "categories": categories,
+                      "category": "Business",
+                      **base_context,
+                      **weather_context,})
    
     if label == "world":
         from django.db.models import Count

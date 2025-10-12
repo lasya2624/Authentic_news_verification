@@ -18,13 +18,22 @@ Including another URLconf
 # authentic_news_project/urls.py
 from django.contrib import admin
 from django.urls import path, include
-from news_feed.views import sign_up
+
+from django.contrib import admin
+from django.urls import path, include
+from news_feed import views as news_feed_views
+from django.contrib.auth import views as auth_views
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('news_feed.urls')),
-    path('accounts/signup/', sign_up, name='signup'),
+    # Set the new landing_page as the root URL
+    path('', news_feed_views.landing_page, name='landing_page'),
+    # Include all the URLs from your news_feed app
+    path('news/', include('news_feed.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
+    path('api/add-article/', news_feed_views.add_article_api, name='add_article_api'),
+    
 ]
 
 

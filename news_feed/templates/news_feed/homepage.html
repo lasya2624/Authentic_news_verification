@@ -87,7 +87,20 @@
 </head>
 <body class="antialiased text-gray-800">
 
-    <header class="bg-white shadow-sm p-4 sticky top-0 z-50">
+    <header class="bg-white shadow-sm p-4 sticky top-0 z-50" >
+        {% if user.is_authenticated %}
+    <div class="user-info">
+        <span>Welcome, {{ user.username }}!</span>
+        <button> 
+            <form action="{% url 'logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="logout-button">Logout
+        </button>
+</form>
+ </button>
+    </div>
+        {% endif %}
+
     <div class="container mx-auto flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:-ml-16">
         <h1 class="text-3xl font-bold text-gray-900">Authentic News</h1>
         <form action="{% url 'search_results' %}" method="get" class="w-full md:w-1/2 md:ml-16">

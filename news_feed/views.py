@@ -13,13 +13,15 @@ from django.utils import timezone
 import subprocess
 import sys
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
+from django.shortcuts import redirect, render
 
 
 CATEGORY_LIST = [
     "India", "World", "Local", "Business",
-    "Technology", "Sports", "Health",
+    "Technology", "Sports", "Health","Science",
 ]
 TOP_SOURCES = {'The Hindu','NDTV','Al Jazeera','Times of India'}
 
@@ -32,30 +34,108 @@ def _recent(qs, minimum=30):
     qs_recent = qs.filter(publication_date__gte=RECENT)
     return qs_recent if qs_recent.count() >= minimum else qs[:minimum]
 
-@csrf_exempt # Important: This is for API endpoints
+
+# In views.py, inside your subscribe function
+
+
+# news_feed/views.py
+
+# Add to the top of your imports (if not already there):
+import requests 
+from django.urls import reverse # For better URL handling
+
+# Define the webhook URL (This should ideally come from settings.py)
+ZAPIER_SIGNUP_WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/24943492/ur29grl/'
+
+def signup_view(request):
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+
+            # Enhanced webhook call with better logging
+            try:
+                webhook_data = {
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'subscription_date': timezone.now().isoformat(),
+                    'full_name': f"{user.first_name} {user.last_name}".strip(),
+                }
+                
+                print(f"🔄 Sending webhook data: {webhook_data}")
+                
+                response = requests.post(
+                    ZAPIER_SIGNUP_WEBHOOK_URL,
+                    json=webhook_data,
+                    headers={'Content-Type': 'application/json'},
+                    timeout=5
+                )
+                
+                print(f"✅ Webhook response: Status {response.status_code}")
+                print(f"✅ Response text: {response.text}")
+                
+            except Exception as e:
+                print(f"❌ Webhook error: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                
+            return redirect('homepage')
+    
+    else:
+        form = SignUpForm()
+    return render(request, 'registration/signup.html', {'form': form})
+
+
+@csrf_exempt
 def add_article_api(request):
     if request.method == 'POST':
+        print("\n" + "="*50)
+        print("--- RECEIVED POST REQUEST AT /api/add-article/ ---")
+        
         try:
-            # Load the JSON data sent by n8n
-            data = json.loads(request.body)
+            # --- DIAGNOSTIC STEP 1: Log the raw incoming data ---
+            raw_body = request.body.decode('utf-8')
+            print(f"1. Raw Request Body Received:\n{raw_body}\n")
 
-            # Create a new Article object
+            # --- DIAGNOSTIC STEP 2: Try to parse the data ---
+            print("2. Attempting to parse body as JSON...")
+            data = json.loads(raw_body)
+            print("   ...JSON parsing successful.")
+            print(f"3. Parsed Data:\n{data}\n")
+
+            # --- DIAGNOSTIC STEP 3: Try to create the article ---
+            print("4. Attempting to create Article object...")
             new_article = Article.objects.create(
                 title=data.get('title'),
                 summary=data.get('summary'),
                 category=data.get('category'),
                 source_url=data.get('source_url'),
-                credibility_score=int(data.get('credibility_score') or 0),
+                credibility_score=int(data.get('credibility_score', 0) or 0),
                 source_name=data.get('source_name'),
-                is_verified=True # Mark as verified
+                is_verified=True
             )
-            
-            # Return a success message
+            print("   ...Article creation successful.")
+
+            print("--- REQUEST PROCESSED SUCCESSFULLY ---")
+            print("="*50 + "\n")
             return JsonResponse({'status': 'success', 'message': f'Article "{new_article.title}" created successfully.'})
-        
+
         except Exception as e:
-            # Return an error message if something goes wrong
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            # --- DIAGNOSTIC STEP 4: Log the exact error ---
+            print(f"\n!!! CRITICAL ERROR: An exception occurred! !!!")
+            print(f"    ERROR TYPE: {type(e).__name__}")
+            print(f"    ERROR MESSAGE: {e}")
+            print("--- REQUEST FAILED ---")
+            print("="*50 + "\n")
+            
+            # Return a more informative error message
+            return JsonResponse({
+                'status': 'error',
+                'error_type': type(e).__name__,
+                'message': str(e)
+            }, status=400)
         
     if request.method == 'GET':
         try:
@@ -178,7 +258,8 @@ def signup_view(request):
         # Check if the form data is valid.
         if form.is_valid():
             user = form.save()  # Save the new user to the database.
-            login(request, user)  # Log the user in immediately after signup.
+            login(request, user) 
+            requests.post(ZAPIER_SIGNUP_WEBHOOK_URL) # Log the user in immediately after signup.
             return redirect('homepage')  # Redirect to the main news feed.
     # If it's a GET request, just display a blank signup form.
     else:
@@ -297,6 +378,28 @@ def subscribe(request):
         subscription, created = UserSubscription.objects.get_or_create(user=request.user)
         subscription.is_subscribed = True
         subscription.save()
+
+        # --- NEW: Trigger Zapier Webhook upon successful subscription ---
+        try:
+            webhook_data = {
+                'user_id': request.user.id,
+                'username': request.user.username,
+                'email': request.user.email,
+                'subscription_date': timezone.now().isoformat(),
+                'status': 'Subscribed' 
+            }
+            requests.post(
+                ZAPIER_SIGNUP_WEBHOOK_URL,
+                json=webhook_data,
+                headers={'Content-Type': 'application/json'},
+                timeout=5
+            )
+            print(f"✅ Subscription data sent to Zapier for user: {request.user.username}")
+
+        except Exception as e:
+            print(f"❌ Zapier subscription webhook failed: {str(e)}")
+        # --- END NEW WEBHOOK ---
+        
         return redirect('homepage')
     return redirect('homepage')
 def get_category_list():
@@ -307,8 +410,11 @@ def get_category_list():
           .exclude(category__iexact='General')  
           .values_list('category', flat=True)
           .distinct())
+    
     cats = sorted([c for c in qs if c])  # remove Nones/empties
+    # CATEGORIES_TO_REMOVE = {"News Showcase"}
     # Optionally prepend a curated set for order
+    # canonical_categories -= CATEGORIES_TO_REMOVE
     have = sorted(c.strip() for c in qs if c and c.strip())
     have = [c for c in have if c not in {CATEGORY_FOR_YOU, CATEGORY_SHOWCASE,'General'}]
     preferred = ["India", "World", "Local", "Business",

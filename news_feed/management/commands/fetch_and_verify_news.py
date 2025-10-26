@@ -88,7 +88,9 @@ CANON = {
     'sports': 'Sports', 'cricket': 'Sports', 'football': 'Sports', 'volleyball': 'Sports', 'hockey': 'Sports', 'badminton': 'Sports',
     'science': 'Science',
     'health': 'Health',
+    'News': 'News Showcase',
 }
+CATEGORIES_TO_REMOVE = {"News"}
 TOP_SOURCES = {"The Hindu", "NDTV", "Al Jazeera", "Times of India", "Reuters", "The Verge", "ESPN", "eonline.com", "ScienceDaily", "Medical News Today"}
 MIN_SCORE_FOR_VERIFIED = 40
 
@@ -371,7 +373,7 @@ class Command(BaseCommand):
         
 
         category_feeds = {
-            'Technology': ['https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pKVGlnQVAB?hl=en-IN&gl=IN&ceid=IN:en',
+            'Technology': [
                 'https://www.wired.com/feed/rss',
                 'https://techcrunch.com/feed/',
                             ],

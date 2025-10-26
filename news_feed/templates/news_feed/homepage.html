@@ -133,16 +133,14 @@
         class="px-4 py-2 rounded-full {% if category|lower == 'news showcase' %}bg-blue-100 text-blue-600 active{% endif %}">
     News Showcase
     </a>
-    {% for cat in categories %}
-      <a href="{% url 'categorized_news' cat %} "
-         class="px-4 py-2 rounded-full {% if category|lower == cat|lower %}  bg-blue-100 text-blue-600 active{% endif %} hover:bg-blue-100 hover:text-blue-600 transition">
-        {{ cat }}
-      </a>
+    {% for category in categories %}
+        {% if category and 'http' not in category and '/' not in category %}
+            <a href="{% url 'categorized_news' category=category %}" class="px-4 py-2 rounded-full {% if category|lower == 'category' %}bg-blue-100 text-blue-600 active{% endif %}">{{ category }}</a>
+        {% endif %}
     {% endfor %}
+
   </div>
 </nav>
-
-
     
     <main class="container mx-auto p-4 md:p-6 mt-4">
         {% if articles %}

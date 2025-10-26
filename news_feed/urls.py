@@ -8,8 +8,8 @@ from news_feed import views
 
 urlpatterns = [
     path('', views.landing_page, name='landing_page'),
-    path('home/', views.homepage, name='homepage'),
     path("category/<slug:category>/", views.categorized_news, name="categorized_news"),
+    path('home/', views.homepage, name='homepage'),
     path('search/', views.search_results, name='search_results'),
     path('subscribe/', views.subscribe, name='subscribe'),
     path('weather/', views.weather_report, name='weather_report'),

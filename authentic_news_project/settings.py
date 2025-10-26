@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-@j_3xp344a^*8-xwsz-&$q7+#-fqgz1ixgfh_blngdq*743qea
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    '46a3e3792e14.ngrok-free.app',
+    'de004673254a.ngrok-free.app',
     'localhost',
     '127.0.0.1',
 ]
@@ -88,7 +88,7 @@ DATABASES = {
 }
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://46a3e3792e14.ngrok-free.app'
+    'https://de004673254a.ngrok-free.app'
 ]
 
 
@@ -157,3 +157,35 @@ CRONJOBS = [
     # Or run every hour from 6 AM to 10 PM
     ('0 6-22 * * *', 'news_feed.management.commands.fetch_and_verify_news.Command', {}, 'fetch_news_hourly'),
 ]
+
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'  # or your email provider
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'chandralasya24@gmail.com'  # Your email
+# EMAIL_HOST_PASSWORD = 'wpzz vzsu uddn yniw'  # App password, not regular password
+
+# # Default from email
+# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# EMAIL_USE_SSL = False  # Use TLS instead
+# EMAIL_TIMEOUT = 60
+
+
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'file': {
+#             'level': 'INFO',
+#             'class': 'logging.FileHandler',
+#             'filename': 'email_notifications.log',
+#         },
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['file'],
+#             'level': 'INFO',
+#             'propagate': True,
+#         },
+#     },
+# }

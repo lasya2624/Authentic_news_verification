@@ -14,6 +14,7 @@ class Article(models.Model):
     image_analysis_score = models.IntegerField(default=0)
     source_name = models.CharField(max_length=100, default='Unknown')
     verified_by_sources = models.CharField(max_length=500, default='Not available')
+    email_sent = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title
@@ -56,3 +57,25 @@ class Meta:
         )
     ]
 
+# from django.db import models
+
+# class Subscriber(models.Model):
+#     email = models.EmailField(unique=True)
+#     first_name = models.CharField(max_length=100, blank=True, null=True)
+#     last_name = models.CharField(max_length=100, blank=True, null=True)
+#     is_active = models.BooleanField(default=True)  # Only active subscribers get emails
+#     subscribed_date = models.DateTimeField(auto_now_add=True)
+#     categories = models.JSONField(default=list, blank=True)  # Optional: category preferences
+    
+#     def __str__(self):
+#         return f"{self.email} ({'Active' if self.is_active else 'Inactive'})"
+    
+#     class Meta:
+#         ordering = ['-subscribed_date']
+
+# class EmailDigest(models.Model):
+#     sent_at = models.DateTimeField(auto_now_add=True)
+#     articles_count = models.IntegerField(default=0)
+    
+#     def __str__(self):
+#         return f"Digest: {self.articles_count} articles at {self.sent_at}"

@@ -64,7 +64,7 @@ Display: The web app shows only verified, categorized news to users.
 
 💻 Installation Steps
 # Clone the repository
-git clone https://github.com/yourusername/verified-news-feed.git
+git clone https://github.com/lasya2624/Authentic_news_verification.git
 cd verified-news-feed
 
 # Create a virtual environment

@@ -1,25 +1,28 @@
-Automatic News Feed System for Verified News
-🚀 Overview
+📰 Automatic Verified News Feed System
+ Overview
 
-This project is a Django-based web application that displays verified and categorized news articles. It integrates AI-powered workflow automation (using Zapier) to fetch live news from multiple RSS feeds, verify their authenticity using AI agents, and publish only trustworthy news to users.
+This project is a Django-based web application integrated with AI workflow automation (n8n) to fetch, verify, and categorize news articles in real time.
+It also includes a subscription system — whenever a new user subscribes, their details are automatically added to Google Sheets, and a separate workflow sends them email notifications for new verified news updates.
 
-🎯 Aim
+ Aim
 
-To develop a smart automated platform that collects real-time news, fact-checks its credibility using AI, and presents only authentic, categorized, and verified news articles for public consumption.
+To build an intelligent automated system that fetches and verifies real-time news using AI, filters fake information, categorizes articles, and notifies subscribed users instantly about verified updates.
 
 🧠 Key Features
 
-Fetches latest news from multiple trusted RSS feeds
+ Fetches latest articles from trusted RSS feeds
 
-Uses AI Agent (OpenAI) for fact verification and web-based credibility checks
+ Verifies authenticity using AI Agent Node( OpenAI) and fact checking
 
-Filters out fake or low-credibility articles automatically
+ Categorizes verified news into sections (Tech, Business, Health, etc.)
 
-Categorizes news into Technology, Business, Sports, Health, Science, etc.
+ Pushes verified results to Django backend via REST API
 
-Displays verified articles via Django Web App
+ Adds new subscriber details to Google Sheets via workflow
 
-Uses Ngrok temporary deployment for live testing
+ Sends automated email notifications to subscribers
+
+ Temporarily deployed using Ngrok
 
 🧩 Tech Stack
 Backend:
@@ -28,7 +31,7 @@ Django 5.x
 
 Python 3.13
 
-REST API Integration
+REST API
 
 Frontend:
 
@@ -36,68 +39,98 @@ HTML, CSS, JavaScript
 
 Automation & AI:
 
-Zapier Workflow Automation
+n8n Workflow Automation
 
-Google OpenAI model for fact verification
+Google Gemini / OpenAI / OpenRouter models
+
+Google Sheets Node for subscription management
+
+Email Node (Gmail ) for sending notifications
 
 Deployment:
 
-Ngrok (temporary tunnel)
+Ngrok (temporary URL for public access)
 
 GitHub for version control
 
 ⚙️ System Workflow
+🧾 News Verification Flow
 
-RSS Feeds are fetched from trusted news sources.
+RSS Feeds are fetched from trusted sources.
 
-n8n Workflow processes each article and sends it to the AI Agent.
+Each article is sent to AI Agent for verification.
 
-AI Verification: The agent checks authenticity, credibility score, and factual correctness.
+The AI returns a JSON with:
 
-Filtering: Only articles with credibility ≥ 50 are accepted.
+is_true (True/False)
 
-Categorization: News is organized by topics (Tech, Health, Business, etc.).
+credibility_score (>40)
 
-Storage: Verified articles are pushed to Django backend via REST API.
+verification_notes (text)
 
-Display: The web app shows only verified, categorized news to users.
+Articles with credibility ≥ 50 are pushed to the Django backend.
+
+Django web app displays verified, categorized articles to users.
+
+📩 Subscriber Notification Flow
+
+When a new user subscribes, their details (name, email) are added to Google Sheets via n8n.
+
+A secondary workflow checks Google Sheets for new entries.
+
+The workflow sends personalized email notifications to each subscriber whenever new verified articles are published.
 
 💻 Installation Steps
 # Clone the repository
 git clone https://github.com/lasya2624/Authentic_news_verification.git
 cd verified-news-feed
 
-# Create a virtual environment
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate   # For Windows: venv\Scripts\activate
+source venv/bin/activate   # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run Django migrations
+# Run migrations
 python manage.py makemigrations
 python manage.py migrate
 
-# Start the development server
+# Start Django server
 python manage.py runserver
 
 
-Then, run the Zapier workflow to start fetching and verifying news.
+Run the Zapier workflows for both:
+
+ AI Verification Flow
+
+ Email Subscription Flow
 
 🔗 API Endpoint Example
 
 POST /api/add-article/
-Stores verified news from workflow into the Django database.
+Stores verified news from the workflow into the backend.
 
 {
   "title": " ",
   "category": " ",
-  "source_url": ,
-  "credibility_score":  ,
+  "source_url": " ",
+  "credibility_score": " ",
   "is_verified": true,
   "verified_by_sources": " "
 }
 
+
+POST /api/subscribe/
+Adds user email to Google Sheets via workflow trigger.
+
+{
+  "name": "John Doe",
+  "email": "john@example.com"
+}
+
 🧾 Example Output
 
-✔️ Verified and categorized articles displayed on the homepage with credibility tags and category filters.
+Verified articles displayed with category tags.
+
+Email updates automatically sent to subscribers.

@@ -45,7 +45,7 @@ import requests
 from django.urls import reverse # For better URL handling
 
 # Define the webhook URL (This should ideally come from settings.py)
-ZAPIER_SIGNUP_WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/24943492/ur29grl/'
+ZAPIER_SIGNUP_WEBHOOK_URL = ''
 
 def signup_view(request):
     if request.method == 'POST':
